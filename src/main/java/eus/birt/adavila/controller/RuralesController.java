@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import eus.birt.adavila.domain.Rurales;
@@ -25,6 +26,7 @@ public class RuralesController {
 	@Autowired
 	RuralesRepo ruralesRepo;
 	
+	//Metodo para listar todos los alojamientos rurales
 	@GetMapping("/rurales")
 	public ResponseEntity<List<Rurales>> index(){
 		try {
@@ -37,6 +39,7 @@ public class RuralesController {
 		}
 	}
 	
+	//Metodo para listar todos los municipios 
 	@GetMapping("/municipios")
 	public ResponseEntity<List<String>> getAllMunicipalities() {
 	    try {
@@ -54,41 +57,46 @@ public class RuralesController {
 	    }
 	}
 	
+	//Metodo para buscar alojamientos por municipio
 	@GetMapping("/municipios/{municipality}")
-	public ResponseEntity<List<Rurales>> ruralesPorMunicipio(@PathVariable("municipality") String municipality) {
+	public ResponseEntity<List<Rurales>> ruralesMunicipio(@PathVariable("municipality") String municipality) {
 	    try {
-	        List<Rurales> rurales = ruralesRepo.findAll();
-	        List<Rurales> ruralesProvincia = new ArrayList<Rurales>();
-	        	        
-	        for (Rurales rural : rurales) {
-	        	if (rural.getProperties().getMunicipality().equals(municipality) || rural.getProperties().getMunicipality().contains(municipality)) {
-	        		ruralesProvincia.add(rural);
-	        	}
-	        }
-	        return new ResponseEntity<List<Rurales>>(ruralesProvincia, HttpStatus.OK);
-	    
+	        List<Rurales> ruralesProvincia = ruralesRepo.findByPropertiesMunicipalityContaining(municipality);
+	        return new ResponseEntity<>(ruralesProvincia, HttpStatus.OK);
 	    } catch (Exception e) {
 	        e.printStackTrace();
-	        return new ResponseEntity<List<Rurales>>(HttpStatus.INTERNAL_SERVER_ERROR);
+	        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 	    }
 	}
 
-	@GetMapping("/imprimir/{documentname}")
-	public String datosRural(@PathVariable("documentname") String documentname) {
-		List<Rurales> rural = ruralesRepo.findAll();
-		Rurales temp = new Rurales();
-        for (Rurales rurales : rural) {
-        	if (rurales.getProperties().getDocumentname().equals(documentname)) {
-        		temp = rurales;
-        	}
-        }
-        String data = "Nombre: " + documentname + "\n" +
-        		"Localidad: " + temp.getProperties().locality + "\n" +
-        		"Municipio: " + temp.getProperties().municipality + "\n" +
-        		"Direccion: " + temp.getProperties().address + "\n" +
-        		"Telefono: " + temp.getProperties().phone + "\n" +
-        		"Web: " + temp.getProperties().web ;
-        		
-        return data;
+	//Metodo para mostrar ciertos datos de un alojamiento seleccionado por el nombre
+	@GetMapping("/datos/{documentname}")
+	public String datosAlojamiento(@PathVariable() String documentname) {
+		try {
+			List<Rurales> rurales = ruralesRepo.findByPropertiesDocumentname(documentname);
+			
+			 if (rurales.isEmpty()) {
+		            return "No existe ningún alojamiento con ese nombre en la base de datos.";
+		        }
+
+		        // Usamos StringBuilder para construir la respuesta en caso de que haya coincidencias en el nombre
+		        StringBuilder data = new StringBuilder();
+		        for (Rurales rural : rurales) {
+		            data.append("Nombre: ").append(rural.getProperties().getDocumentname()).append("\n")
+		                .append("Localidad: ").append(rural.getProperties().getLocality()).append("\n")
+		                .append("Municipio: ").append(rural.getProperties().getMunicipality()).append("\n")
+		                .append("Dirección: ").append(rural.getProperties().getAddress()).append("\n")
+		                .append("Teléfono: ").append(rural.getProperties().getPhone()).append("\n")
+		                .append("Web: ").append(rural.getProperties().getWeb()).append("\n")
+		                .append("--------------------------------------\n"); // Separador entre alojamientos
+		        }
+
+		        return data.toString();
+	    }
+		catch (Exception e)
+		{
+	        e.printStackTrace();
+	        return "Ha ocurrido un error al recuperar los datos";
+		}
 	}
 }
